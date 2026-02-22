@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Reaction Race</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div id="results-container">
+        <div id="mouse-stats" class="information">
+            <h2>Mouse Position</h2>
+            <p id="mouse-coords"></p>
+        </div>
+        <div id="results" class="information"></div>
+    </div>
+    <div id="actions-container">
+    </div>
+
+    <div id="controls-container">
+        <h3>Controls</h3>
+        <div class="controls-grid">
+            <div class="controls-row primary">
+                <div class="group start-stop">
+                    <button id="start-btn" class="control-btn">Start</button>
+                    <button id="stop-btn" class="control-btn" disabled>Stop</button>
+                </div>
+                <div class="group timer">
+                    <label>Timer</label>
+                    <div class="timer-display-wrap">
+                        <span id="timer-display" aria-live="polite">0.00s</span>
+                    </div>
+                </div>
+                <div class="group race">
+                    <label for="race-mode">Race Mode</label>
+                    <select id="race-mode">
+                        <option value="none">Practice</option>
+                        <option value="10">10 Clicks</option>
+                        <option value="20">20 Clicks</option>
+                        <option value="30">30 Clicks</option>
+                        <option value="timed-30">30 Seconds</option>
+                        <option value="timed-60">60 Seconds</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="controls-row secondary">
+                <div class="group sliders">
+                    <div class="control-group">
+                        <label for="speed-control">Dot Speed (ms): <span id="speed-value">2000</span></label>
+                        <input type="range" id="speed-control" min="500" max="5000" value="2000" step="100">
+                    </div>
+                    <div class="control-group">
+                        <label for="size-control">Dot Size (px): <span id="size-value">20</span></label>
+                        <input type="range" id="size-control" min="10" max="50" value="20" step="2">
+                    </div>
+                </div>
+                <div class="group appearance">
+                    <div class="control-group">
+                        <label for="color-control">Dot Color</label>
+                        <input type="color" id="color-control" value="#0066ff">
+                    </div>
+                    <div class="control-group">
+                        <label for="shape-control">Dot Shape</label>
+                        <select id="shape-control">
+                            <option value="circle">Circle</option>
+                            <option value="square">Square</option>
+                            <option value="triangle">Triangle</option>
+                            <option value="diamond">Diamond</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label for="toggle-3d-btn">Arena View</label>
+                        <button id="toggle-3d-btn" class="control-btn" type="button">Enable 3D</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="report-overlay" class="overlay hidden">
+        <div class="report-card">
+            <h2>Complete!</h2>
+            <div id="report-content"></div>
+            <button id="close-report-btn" class="control-btn">Close</button>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
+    <script src="script.js"></script>
+
+</body>
+
+</html>
