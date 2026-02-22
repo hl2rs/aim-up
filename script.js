@@ -777,6 +777,9 @@ class ThreeArena {
     this.gridSize = gridSize;
     this.theme = readArenaThemeFromCss();
 
+    this._lights = null;
+    this._lastRoomW = null;
+
     const rect = container.getBoundingClientRect();
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -793,10 +796,11 @@ class ThreeArena {
       200,
     );
 
-    this.roomW = 10;
-    this.roomD = 24;
-    this.roomH = 10;
-
+    const dims = this._calculateRoomDimensions(rect);
+    this.roomW = dims.roomW;
+    this.roomD = dims.roomD;
+    this.roomH = dims.roomH;
+    this._lastRoomW = this.roomW;
     this.cellSize = this.roomW / this.gridSize;
 
     this._textures = [];
@@ -839,10 +843,9 @@ class ThreeArena {
 
       if (hitTarget) {
         if (!dotStartTime) return;
-        const centerPx = this._projectToScreenPx(
-          hitTarget.position,
-          canvasRect,
-        );
+        const worldCenter = new THREE.Vector3();
+        hitTarget.getWorldPosition(worldCenter);
+        const centerPx = this._projectToScreenPx(worldCenter, canvasRect);
         const raceCompleted = registerHit({
           clientX: e.clientX,
           clientY: e.clientY,
@@ -877,6 +880,8 @@ class ThreeArena {
       this.camera.aspect = r.width / r.height;
       this.camera.updateProjectionMatrix();
       this.renderer.setSize(r.width, r.height, false);
+
+      this._updateRoomForRect(r);
     };
     window.addEventListener("resize", this._onResize);
 
@@ -936,27 +941,124 @@ class ThreeArena {
   }
 
   _buildLights() {
-    this.scene.add(new THREE.AmbientLight(0xffffff, 0.55));
+    if (!this._lights) {
+      const ambient = new THREE.AmbientLight(0xffffff, 0.55);
+      this.scene.add(ambient);
 
-    const hemi = new THREE.HemisphereLight(
-      0xc8f2ff,
-      new THREE.Color(this.theme.floor),
-      0.45,
-    );
-    hemi.position.set(0, 12, -6);
-    this.scene.add(hemi);
+      const hemi = new THREE.HemisphereLight(
+        0xc8f2ff,
+        new THREE.Color(this.theme.floor),
+        0.45,
+      );
+      this.scene.add(hemi);
 
-    const dir = new THREE.DirectionalLight(0xffffff, 0.9);
-    dir.position.set(6, 10, 6);
-    this.scene.add(dir);
+      const dir = new THREE.DirectionalLight(0xffffff, 0.9);
+      this.scene.add(dir);
 
-    const fill = new THREE.PointLight(
-      new THREE.Color(this.theme.wall1),
-      0.55,
-      60,
-    );
-    fill.position.set(0, this.roomH * 0.85, -this.roomD * 0.65);
-    this.scene.add(fill);
+      const fill = new THREE.PointLight(
+        new THREE.Color(this.theme.wall1),
+        0.55,
+        80,
+      );
+      this.scene.add(fill);
+
+      this._lights = { ambient, hemi, dir, fill };
+    }
+
+    this._syncLights();
+  }
+
+  _syncLights() {
+    if (!this._lights) return;
+
+    this._lights.hemi.groundColor = new THREE.Color(this.theme.floor);
+    this._lights.hemi.position.set(0, this.roomH * 1.2, -this.roomD * 0.25);
+
+    this._lights.dir.position.set(this.roomW * 0.55, this.roomH * 1.1, 6);
+
+    this._lights.fill.color = new THREE.Color(this.theme.wall1);
+    this._lights.fill.distance = Math.max(60, this.roomD * 3.2);
+    this._lights.fill.position.set(0, this.roomH * 0.85, -this.roomD * 0.65);
+  }
+
+  _calculateRoomDimensions(rect) {
+    const w = Math.max(1, rect.width);
+    const h = Math.max(1, rect.height);
+    const aspect = w / h;
+
+    const baseW = 10;
+    const widen = Math.max(1, Math.min(1.85, aspect));
+    const roomW = baseW * widen;
+    const roomD = roomW * 2.4;
+    const roomH = 10;
+
+    return { roomW, roomD, roomH };
+  }
+
+  _disposeRoomMeshes() {
+    if (!this._roomMeshes) return;
+    for (const mesh of Object.values(this._roomMeshes)) {
+      if (!mesh) continue;
+      this.scene.remove(mesh);
+      mesh.geometry?.dispose?.();
+      if (Array.isArray(mesh.material)) {
+        for (const m of mesh.material) m?.dispose?.();
+      } else {
+        mesh.material?.dispose?.();
+      }
+    }
+    this._roomMeshes = null;
+  }
+
+  _disposeTextures() {
+    if (!this._textures) return;
+    for (const t of this._textures) t?.dispose?.();
+    this._textures.length = 0;
+  }
+
+  _updateRoomForRect(rect) {
+    const dims = this._calculateRoomDimensions(rect);
+
+    const quantizedW = Math.round(dims.roomW * 2) / 2;
+    if (
+      this._lastRoomW !== null &&
+      Math.abs(quantizedW - this._lastRoomW) < 0.25
+    )
+      return;
+
+    this.roomW = quantizedW;
+    this.roomD = this.roomW * 2.4;
+    this.roomH = dims.roomH;
+    this.cellSize = this.roomW / this.gridSize;
+    this._lastRoomW = this.roomW;
+
+    this.theme = readArenaThemeFromCss();
+    this._syncLights();
+
+    this._disposeRoomMeshes();
+    this._disposeTextures();
+    this._buildRoom();
+    this._buildVoxelFloor();
+    this._setCameraPose();
+
+    for (const t of Array.from(this.targets)) {
+      const halfW = this.roomW / 2;
+      const maxX = halfW - this.cellSize / 2;
+      const minZ = -this.roomD + this.cellSize / 2;
+      const maxZ = -this.cellSize / 2;
+      t.position.x = Math.max(-maxX, Math.min(maxX, t.position.x));
+      t.position.z = Math.max(minZ, Math.min(maxZ, t.position.z));
+      t.position.y = Math.max(
+        this.cellSize,
+        Math.min(this.roomH - this.cellSize, t.position.y),
+      );
+
+      const radius = this._radiusFromDotSize(dotSize);
+      if (t.geometry) {
+        t.geometry.dispose();
+        t.geometry = new THREE.SphereGeometry(radius, 32, 24);
+      }
+    }
   }
 
   _buildRoom() {
@@ -1439,8 +1541,10 @@ class ThreeArena {
   }
 
   _setCameraPose() {
-    this.camera.position.set(0, 5.7, 7.6);
-    this.camera.lookAt(0, 1.4, -7.6);
+    const y = this.roomH * 0.62;
+    const z = Math.max(6, this.roomD * 0.34);
+    this.camera.position.set(0, y, z);
+    this.camera.lookAt(0, this.roomH * 0.22, -this.roomD * 0.55);
   }
 
   randomElevation() {

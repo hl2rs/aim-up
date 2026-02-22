@@ -19,6 +19,8 @@
   --shadow-2: inset 0 20px 60px rgba(0, 0, 0, 0.45);
   --blur: 80px;
   --grid-size: 20;
+  --ui-reserve: 380px;
+  --arena-min: 260px;
 
   --arena-wall-0: #000000;
   --arena-wall-1: #48be99;
@@ -50,6 +52,15 @@ body {
   background: url(/AdobeStock_536515122.jpeg);
   background-size: cover;
   background-attachment: fixed;
+  min-height: 100vh;
+  overflow-x: hidden;
+  padding: clamp(10px, 2.2vh, 18px) 0;
+}
+
+@supports (height: 100svh) {
+  body {
+    min-height: 100svh;
+  }
 }
 
 html::before {
@@ -63,7 +74,7 @@ html::before {
 
 #results-container {
   position: relative;
-  margin: clamp(12px, 3vw, 24px) auto 0 auto;
+  margin: 0 auto;
   width: min(1200px, 92vw);
   display: grid;
   grid-template-columns: repeat(2, minmax(260px, 1fr));
@@ -92,9 +103,20 @@ html::before {
 
 #actions-container {
   position: relative;
-  margin: clamp(12px, 3vw, 24px) auto;
-  width: min(92vw, 1320px);
-  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  container-type: size;
+  width: min(
+    92vw,
+    92vmin,
+    1320px,
+    max(var(--arena-min), calc(100vh - var(--ui-reserve)))
+  );
+  height: min(
+    92vw,
+    92vmin,
+    1320px,
+    max(var(--arena-min), calc(100vh - var(--ui-reserve)))
+  );
   background: var(--card-bg);
   border: 1px solid var(--card-border);
   border-top: 2px solid rgba(255, 255, 255, 0.22);
@@ -108,6 +130,61 @@ html::before {
     box-shadow 260ms ease,
     filter 260ms ease;
   transform-style: preserve-3d;
+}
+
+@supports (height: 100svh) {
+  #actions-container {
+    width: min(
+      92vw,
+      92vmin,
+      92svh,
+      1320px,
+      max(var(--arena-min), calc(100svh - var(--ui-reserve)))
+    );
+    height: min(
+      92vw,
+      92vmin,
+      92svh,
+      1320px,
+      max(var(--arena-min), calc(100svh - var(--ui-reserve)))
+    );
+  }
+}
+
+@media (min-width: 1100px) {
+  #actions-container {
+    width: min(96vw, 1520px);
+    height: clamp(
+      var(--arena-min),
+      calc(100vh - var(--ui-reserve) - 10vw),
+      760px
+    );
+  }
+
+  body #actions-container.is-3d .arena-cube {
+    --cube-depth: clamp(160px, 38vh, 380px);
+    --room-angle: 52deg;
+    --room-depth: calc(var(--cube-depth) * -0.32);
+    --room-scale: 1.01;
+    --room-y-offset: 1.2%;
+    transform-origin: center 56%;
+  }
+}
+
+@supports (height: 100svh) {
+  @media (min-width: 1100px) {
+    #actions-container {
+      height: clamp(
+        var(--arena-min),
+        calc(100svh - var(--ui-reserve) - 10vw),
+        760px
+      );
+    }
+
+    body #actions-container.is-3d .arena-cube {
+      --cube-depth: clamp(160px, 38svh, 380px);
+    }
+  }
 }
 
 .three-canvas {
@@ -132,11 +209,17 @@ html::before {
 }
 
 .arena-cube {
-  --cube-depth: clamp(220px, 34vw, 460px);
+  --cube-depth: clamp(220px, 34vmin, 460px);
   --voxel-depth: calc(var(--cube-depth) / var(--grid-size));
   position: absolute;
   inset: 0;
   transform-style: preserve-3d;
+}
+
+@supports (width: 1cqw) {
+  .arena-cube {
+    --cube-depth: clamp(160px, 70cqh, 460px);
+  }
 }
 
 .cube-face {
@@ -282,6 +365,7 @@ html::before {
   background-size: calc(100% / var(--grid-size)) calc(100% / var(--grid-size));
   background-position: center;
   background-repeat: repeat;
+  border-radius: inherit;
 }
 
 #actions-container.is-3d .cube-back {
@@ -295,6 +379,7 @@ html::before {
     var(--arena-wall-2)
   );
   border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: inherit;
 }
 
 #actions-container.is-3d .cube-left {
@@ -427,6 +512,10 @@ html::before {
 }
 
 .blue-dot.is-moving .dot-visual {
+  filter: none;
+}
+
+#actions-container.is-3d .blue-dot.is-moving .dot-visual {
   filter: blur(0.4px) saturate(1.05);
 }
 
@@ -449,6 +538,10 @@ html::before {
   opacity: 0.9;
   mix-blend-mode: screen;
   pointer-events: none;
+}
+
+#actions-container:not(.is-3d) .blue-dot.is-moving .dot-visual::after {
+  display: none;
 }
 
 #actions-container.is-3d .blue-dot.dot-3d {
@@ -578,7 +671,7 @@ html::before {
 
 #controls-container {
   position: relative;
-  margin: 0 auto clamp(12px, 3vh, 24px);
+  margin: 0 auto;
   width: min(1200px, 94vw);
   background: var(--card-bg);
   border: 1px solid var(--card-border);
@@ -638,7 +731,8 @@ html::before {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 300px;
+  width: min(300px, 100%);
+  max-width: 100%;
 }
 #timer-display {
   font-weight: 800;
@@ -776,6 +870,14 @@ select {
   box-shadow: var(--shadow-2);
   backdrop-filter: blur(18px);
   padding: clamp(16px, 3.2vw, 28px);
+  max-height: 92vh;
+  overflow: auto;
+}
+
+@supports (height: 100svh) {
+  .report-card {
+    max-height: 92svh;
+  }
 }
 .report-card h2 {
   margin: 0 0 12px 0;
@@ -829,6 +931,10 @@ select {
 }
 
 @media (max-width: 900px) {
+  :root {
+    --ui-reserve: 470px;
+    --arena-min: 220px;
+  }
   #results-container {
     grid-template-columns: 1fr;
   }
@@ -838,12 +944,44 @@ select {
   .controls-row.secondary {
     grid-template-columns: 1fr;
   }
+  .group.timer {
+    width: 100%;
+    justify-self: stretch;
+  }
+  .timer-display-wrap {
+    width: 100%;
+  }
+  #timer-display {
+    width: 100%;
+    text-align: center;
+  }
 }
 @media (max-width: 560px) {
+  :root {
+    --ui-reserve: 520px;
+    --arena-min: 190px;
+  }
   #controls-container {
     width: 94vw;
   }
   .group.start-stop {
     grid-template-columns: 1fr;
+  }
+  .stat-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-height: 740px) {
+  :root {
+    --ui-reserve: 520px;
+    --arena-min: 200px;
+  }
+}
+
+@media (max-height: 640px) {
+  :root {
+    --ui-reserve: 580px;
+    --arena-min: 160px;
   }
 }
